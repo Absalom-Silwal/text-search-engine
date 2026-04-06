@@ -11,14 +11,6 @@ services:
       - mongo
       - redis
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:5173"
-    environment:
-      - VITE_API_URL=http://127.0.0.1:8080
-    depends_on:
-      - backend
 
   mongo:
     image: mongo:latest
