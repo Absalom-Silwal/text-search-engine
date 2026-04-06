@@ -12,7 +12,6 @@ class SearchService:
         docs = await db.documents.find({}).to_list(length=None)
         doc_tokens = defaultdict(dict)
         for doc in docs:
-            print('doc',doc)
             tokens = tokenize(doc['content'])
             cleaned = clean_words(tokens)
             doc_tokens[doc['_id']]=cleaned
@@ -21,7 +20,6 @@ class SearchService:
         query_tokens = tokenize(query)
         query_cleaned = clean_words(query_tokens)
         scores = await RankingService.ranking(docs,query_cleaned,indexed_tokens)
-        print('scores',scores)
         ranked_result = []
         for score in scores:
             doc = await db.documents.find_one({'_id': ObjectId(score[0])})
