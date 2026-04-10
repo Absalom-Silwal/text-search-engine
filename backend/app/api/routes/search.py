@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Query
 from app.services.search_service import SearchService
 from app.models.document import SearchResult
-from typing import List
 
 router = APIRouter()
 
-@router.get("/search", response_model=List[SearchResult])
-async def search(q: str = Query(..., min_length=1)):
+@router.get("/search", response_model=SearchResult)
+async def search(q: str = Query(..., min_length=1),page:int=1,limit:int=10):
     results = await SearchService.search(q)
-    print(results)
-    return results
+    start = (page-1)*limit
+    end = start + limit
+    return  SearchResult(
+        items= results[start:end],
+        total= len(results),
+        page= page,
+        pages= (len(results) + limit - 1) // limit
+        )

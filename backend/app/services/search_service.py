@@ -18,7 +18,8 @@ class SearchService:
                 "title": doc["title"],
                 "snippet": doc["content"][:150] + "...",
                 "score":score[1],
-                "explanation": f"Matched terms with TF‑IDF score {score[1]:.4f}"
+                "explanation": f"Matched terms with TF‑IDF score {score[1]:.4f}",
+                "link":doc["link"]
             })
 
         return ranked_result
