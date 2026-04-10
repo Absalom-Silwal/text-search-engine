@@ -1,32 +1,50 @@
+import csv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.api.routes import search, feedback
 from app.db.mongo import db
+from collections import defaultdict
 from app.services.search_service import SearchService
+from app.helpers.search import  tokenize,clean_words,inverted_index
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Seed data if DB is empty
+    #count = await db.documents.count_documents({})
+    await db.drop_collection('documents')
+    data = []
+    #read from csv file
+    with open("app/assets/data.csv", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        data = list(reader)
+    await db.documents.insert_many(data)
     count = await db.documents.count_documents({})
-    if count == 0:
-        sample_docs = [
-            {"title": "FastAPI Guide", "content": "FastAPI is a modern web framework for building APIs with Python."},
-            {"title": "React Best Practices", "content": "React is a JavaScript library for building user interfaces."},
-            {"title": "MongoDB for Beginners", "content": "MongoDB is a source-available cross-platform document-oriented database program."},
-            {"title": "Redis Performance", "content": "Redis is an in-memory data structure store, used as a distributed, in-memory key–value database."},
-            {"title": "Python for Data Science", "content": "Python is a high-level programming language known for its readability and versatility."},
-            {"title": "Vite: Next Generation Frontend Tooling", "content": "Vite is a build tool that aims to provide a faster and leaner development experience."},
-            {"title": "Machine Learning Overview", "content": "Machine learning is a field of study in artificial intelligence that gives computers the ability to learn without being explicitly programmed."},
-            {"title": "Docker in Production", "content": "Docker is a set of platform as a service products that use OS-level virtualization to deliver software in packages called containers."},
-            {"title": "Microservices Architecture", "content": "Microservices are an architectural style that structures an application as a collection of services."},
-            {"title": "Clean Code Principles", "content": "Clean code is code that is easy to understand and easy to change."},
-        ]
-        await db.documents.insert_many(sample_docs)
+    if count > 0:
+        await db.drop_collection("invert_indexes")
+        #calculate the index
+        docs = await db.documents.find({}).to_list(length=None)
+        doc_tokens = defaultdict(dict)
+        for doc in docs:
+            tokens = tokenize(doc['content'])
+            cleaned = clean_words(tokens)
+            doc_tokens[doc['_id']]=cleaned
+        
+        indexed_tokens = inverted_index(doc_tokens)
+        #insert into the database
+        if indexed_tokens:
+            await db.invert_indexes.insert_many(indexed_tokens)
+        else:
+            print("No tokens generated — skipping insert.")
     yield
 
 
 app = FastAPI(title="Feedback Search Engine", lifespan=lifespan)
+data = []
+
+
 
 app.add_middleware(
     CORSMiddleware,

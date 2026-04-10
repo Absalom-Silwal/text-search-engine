@@ -28,10 +28,8 @@ def clean_words(words):
 
 def inverted_index(docs_list):
     index = defaultdict(dict)
-    print('docs_list',docs_list)
     for doc_id, doc in enumerate(docs_list.items()):
         # Count words in this document once
-        print('doc',doc_id,doc)
         freq = {}
         for word in (doc[1]):
             if word in freq:
@@ -39,6 +37,11 @@ def inverted_index(docs_list):
             else:
                 freq[word] = 1
         for word,count in freq.items():
-            index[word][doc[0]] = count
+            #index.append({'word':word,'docs':{'docs':1,'docs2':3}})
+            index[word][str(doc[0])] = count
+    return [
+        {'word':word,'docs':docs} for word,docs in index.items()
+    ]
+            
 
     return index

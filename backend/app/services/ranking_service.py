@@ -1,20 +1,22 @@
-from typing import List, Dict
 from app.db.redis import redis_client
 from collections import defaultdict
+from app.db.mongo import db
 
 class RankingService:
-    async def ranking(docs,query_tokens,indexed_tokens):
+    async def ranking(query_tokens):
         scores =defaultdict(float)
         alpha = 0.3   # feedback weight
         beta = 0.5    # probability weight
+        docs = await db.documents.find({}).to_list(length=None)
         for word in query_tokens:
-            if word not in indexed_tokens:
+            posting =await db.invert_indexes.find_one({'word':word})
+            if not posting:
                 continue
-            posting = indexed_tokens[word]
+            #posting = indexed_tokens[word]
             df = len(posting)
             import math
             idf = math.log(len(docs)/df)
-            for doc_id,tf in posting.items():
+            for doc_id,tf in posting.get('docs').items():
                 #summing all tf*idf of doc_id
                 scores[doc_id] += tf * idf
             query = ' '.join(query_tokens)
