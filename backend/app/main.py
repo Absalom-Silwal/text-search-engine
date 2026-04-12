@@ -12,7 +12,7 @@ from app.helpers.search import  tokenize,clean_words,inverted_index
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure indexes
+    # indexing added to invert_indexes collections
     await db.invert_indexes.create_index("word")
     
     # Seed data if DB is empty

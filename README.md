@@ -1,63 +1,211 @@
-# 🔍 Feedback-Driven Search Engine
+# Searchly Backend – Feedback-Driven Search Engine API
 
-A minimal, production-structured MVP of a search engine that improves ranking based on user clicks.
+This repository contains the **backend service** for Searchly, a hybrid search engine that improves ranking using **TF-IDF, user feedback, and probabilistic scoring**.
 
-## 🚀 Features
-- **Keyword Search:** Uses BM25 (via `rank-bm25`) for initial document retrieval.
-- **Feedback Loop:** Captures clicks on search results.
-- **Dynamic Ranking:** Adjusts scores using the formula: `final_score = bm25_score + 0.3 * click_count`.
-- **Modern Stack:** FastAPI, React (Vite), MongoDB, and Redis.
+---
+
+## Features
+
+* **TF-IDF Search Engine**
+
+  * Inverted index-based retrieval
+  * Efficient query processing
+
+* **Feedback System**
+
+  * Tracks user clicks per query-document pair
+  * Stored in Redis for real-time updates
+
+* **Hybrid Ranking**
+  Combines:
+
+  * TF-IDF score 
+  * Click count 
+  * Probability score 
+
+  ```text
+  final_score = tfidf + α * clicks + β * probability
+  ```
+
+* **Explainable Results**
+
+  * Returns score breakdown for each result
+
+* **CSV Data Ingestion**
+
+  * Imports sample data from CSV
+  * Stores in MongoDB before indexing
+
+---
+
+## Performance Optimizations
+
+To ensure efficient and scalable search performance, the backend includes several key optimizations:
+
+
+* **Batch Data Fetching**
+
+  * Replaced sequential database and Redis calls with:
+
+    * MongoDB batch queries
+    * Redis pipeline operations
+  * Significantly reduces network overhead
+
+* **Pagination at Service Level**
+
+  * Implements pagination using MongoDB `$in` queries
+  * Fetches only required documents per page
+
+* **Efficient Database Access**
+
+  * Added index on:
+
+    ```
+    inverted_indexes.word
+    ```
+  * Speeds up term lookup during search
+
+* **Optimized API Design**
+
+  * Search endpoint supports:
+
+    ```
+    page, limit
+    ```
+  * Enables scalable result navigation
+
+* **Faster Startup**
+
+  * Database seeding runs only when collections are empty
+  * Prevents redundant data loading
+
+---
 
 ## 🏗️ Architecture
-- **Backend (FastAPI):**
-  - `SearchService`: Coordinates BM25 search and result hydration.
-  - `RankingService`: Merges BM25 scores with feedback boosts from Redis.
-  - `FeedbackService`: Increments click counts in Redis for specific query-document pairs.
-- **Frontend (React):**
-  - `SearchBar`: Trigger searches.
-  - `ResultsList`: Displays results with scores and explanations.
-  - `useSearch`: Custom hook managing state and feedback logic.
-- **Storage:**
-  - **MongoDB:** Stores document content and metadata.
-  - **Redis:** Stores click counts with query-based keys (e.g., `clicks:fastapi:doc_1`).
 
-## 🛠️ Setup & Run
 
-### Method 1: Docker (Recommended)
-```bash
+CSV → MongoDB → Preprocessing → Inverted Index
+                                     ↓
+Query → SearchService → RankingService
+                                  ↓
+                          Redis (Feedback)
+                                  ↓
+                          Final Ranking
+```
+
+---
+
+## Tech Stack
+
+* Python
+* FastAPI
+* MongoDB (document storage)
+* Redis (feedback storage)
+* Docker
+
+---
+
+## Core Services
+
+### SearchService
+
+* Processes query
+* Computes TF-IDF scores
+* Retrieves matching documents
+
+### RankingService
+
+* Applies hybrid scoring:
+
+  * TF-IDF
+  * Feedback boost
+  * Probability score
+
+### FeedbackService
+
+* Stores click counts in Redis
+* Key format:
+
+  ```
+  clicks:<query>:<doc_id>
+  ```
+
+---
+
+## Setup & Run
+
+### Docker (Recommended)
+
+```
 docker-compose up --build
 ```
 
-### Method 2: Locally Only (Manual Setup)
-1. **Prerequisites:**
-   - Install MongoDB and Redis.
-   - Install Python 3.11+.
-   - Install Node.js 20+.
-2. **Setup Backend:**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate  # or venv\Scripts\activate
-   pip install -r requirements.txt
-   python -m app.main
-   ```
-3. **Setup Frontend:**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+---
 
-- **Frontend:** [http://localhost:5173](http://localhost:5173)
-- **Backend API:** [http://localhost:8000](http://localhost:8000)
-- **API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+### 💻 Local Setup
 
-## 📊 How it works
-1. **Initial Search:** When you search for "fastapi", the system calculates BM25 scores for all matching documents.
-2. **Clicking:** If you click on a result, a POST request is sent to `/feedback`.
-3. **Boosting:** The next time you search for the same term, the clicked document's score is boosted.
-   - `Boost = 0.3 * clicks`
-4. **Explanation:** Each result shows its score breakdown (e.g., `BM25(1.2) + FeedbackBoost(0.6)`).
+```
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python -m app.main
+```
 
-## 📄 Sample Data
-The system automatically seeds 10 sample documents (FastAPI, React, Redis, Docker, etc.) on the first run.
+---
+
+## 🌐 API Endpoints
+
+* `POST /search` → Search documents
+* `POST /feedback` → Record user click
+
+Docs:
+
+```
+http://localhost:8000/docs
+```
+
+---
+
+## Live API
+
+*(Add your Render URL here)*
+
+---
+
+## Related Repository
+
+Frontend:
+*(Add your frontend repo link here)*
+
+---
+
+## Key Design Decisions
+
+* **TF-IDF for MVP**
+
+  * Simple and interpretable
+
+* **Redis for feedback**
+
+  * Fast real-time updates
+
+* **MongoDB for documents**
+
+  * Flexible schema
+
+* **Hybrid ranking**
+
+  * Combines tfidf + click count + probability score
+
+---
+
+## Future Improvements
+
+* Upgrade to BM25
+* Add semantic search
+* Learning-to-rank models
+* Query caching
+
+---
+
