@@ -81,17 +81,15 @@ To ensure efficient and scalable search performance, the backend includes severa
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 
-CSV → MongoDB → Preprocessing → Inverted Index
-                                     ↓
-Query → SearchService → RankingService
-                                  ↓
-                          Redis (Feedback)
-                                  ↓
-                          Final Ranking
-```
+CSV -> MongoDB -> Preprocessing -> Inverted Index
+                                     
+
+Query -> SearchService -> RankingService -> Redis (Feedback)-> Final Ranking
+          
+
 
 ---
 
@@ -127,7 +125,7 @@ Query → SearchService → RankingService
 * Key format:
 
   ```
-  clicks:<query>:<doc_id>
+  <query>:<doc_id>
   ```
 
 ---
@@ -142,7 +140,7 @@ docker-compose up --build
 
 ---
 
-### 💻 Local Setup
+### Local Setup
 
 ```
 cd backend
@@ -154,7 +152,7 @@ python -m app.main
 
 ---
 
-## 🌐 API Endpoints
+## API Endpoints
 
 * `POST /search` → Search documents
 * `POST /feedback` → Record user click
@@ -162,27 +160,27 @@ python -m app.main
 Docs:
 
 ```
-http://localhost:8000/docs
+http://localhost:8080/docs
 ```
 
 ---
 
 ## Live API
 
-*(Add your Render URL here)*
+*https://app-searchly-latest.onrender.com*
 
 ---
 
 ## Related Repository
 
 Frontend:
-*(Add your frontend repo link here)*
+*https://github.com/Absalom-Silwal/text-search-engine-frontend.git*
 
 ---
 
 ## Key Design Decisions
 
-* **TF-IDF for MVP**
+* **TF-IDF for rank score**
 
   * Simple and interpretable
 
