@@ -4,45 +4,56 @@ from app.db.mongo import db
 
 class RankingService:
     async def ranking(query_tokens):
-        scores =defaultdict(float)
+        scores = defaultdict(float)
         alpha = 0.3   # feedback weight
         beta = 0.5    # probability weight
-        docs = await db.documents.find({}).to_list(length=None)
-        for word in query_tokens:
-            posting =await db.invert_indexes.find_one({'word':word})
-            if not posting:
+        
+        # 1. Get total number of documents (N)
+        N = await db.documents.count_documents({})
+        if N == 0:
+            return []
+
+        # 2. Fetch all postings for all query tokens in one go
+        cursor = db.invert_indexes.find({'word': {'$in': query_tokens}})
+        postings = await cursor.to_list(length=None)
+        
+        import math
+        
+        # 3. Calculate TF-IDF component
+        for posting in postings:
+            # df is the number of documents containing this word
+            docs_map = posting.get('docs', {})
+            df = len(docs_map)
+            if df == 0:
                 continue
-            #posting = indexed_tokens[word]
-            df = len(posting)
-            import math
-            idf = math.log(len(docs)/df)
-            for doc_id,tf in posting.get('docs').items():
-                #summing all tf*idf of doc_id
+            
+            idf = math.log(N / df)
+            for doc_id, tf in docs_map.items():
                 scores[doc_id] += tf * idf
-            query = ' '.join(query_tokens)
+        
+        if not scores:
+            return []
 
-            #getting total clicks of the query on all the documents
-            total_query_clicks = await redis_client.get(query)
-            if total_query_clicks is None:
-                total_query_clicks = 0
-            else:
-                total_query_clicks = int(total_query_clicks)
+        query = ' '.join(query_tokens)
 
-            for doc_id,score in scores.items():
-                query_key = f"{query}:{doc_id}"
+        # 4. Handle click-based ranking outside the word loop
+        total_query_clicks = await redis_client.get(query)
+        total_query_clicks = int(total_query_clicks) if total_query_clicks else 0
 
-                # getting click scores only on that document of that query
-                click_score = await redis_client.get(query_key)
-                if click_score is None:
-                    click_score = 0
-                else:
-                    click_score = int(click_score)
-
-                if total_query_clicks > 0:
-                    click_probability = click_score / total_query_clicks
-                else:
-                    click_probability = 0
-                scores[doc_id] = scores[doc_id] + alpha * click_score + beta * click_probability
+        # 5. Use Redis Pipeline to fetch all click scores in one roundtrip
+        async with redis_client.pipeline(transaction=False) as pipe:
+            doc_ids = list(scores.keys())
+            for doc_id in doc_ids:
+                pipe.get(f"{query}:{doc_id}")
+            click_scores_raw = await pipe.execute()
+        
+        # 6. Final score calculation
+        for i, doc_id in enumerate(doc_ids):
+            click_score = int(click_scores_raw[i]) if click_scores_raw[i] else 0
+            
+            click_probability = click_score / total_query_clicks if total_query_clicks > 0 else 0
+            
+            scores[doc_id] += alpha * click_score + beta * click_probability
 
         ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         return ranked

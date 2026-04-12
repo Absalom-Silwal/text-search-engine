@@ -12,32 +12,35 @@ from app.helpers.search import  tokenize,clean_words,inverted_index
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure indexes
+    await db.invert_indexes.create_index("word")
+    
     # Seed data if DB is empty
-    #count = await db.documents.count_documents({})
-    await db.drop_collection('documents')
-    data = []
-    #read from csv file
-    with open("app/assets/data.csv", newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        data = list(reader)
-    await db.documents.insert_many(data)
     count = await db.documents.count_documents({})
-    if count > 0:
-        await db.drop_collection("invert_indexes")
-        #calculate the index
-        docs = await db.documents.find({}).to_list(length=None)
-        doc_tokens = defaultdict(dict)
-        for doc in docs:
-            tokens = tokenize(doc['content'])
-            cleaned = clean_words(tokens)
-            doc_tokens[doc['_id']]=cleaned
-        
-        indexed_tokens = inverted_index(doc_tokens)
-        #insert into the database
-        if indexed_tokens:
-            await db.invert_indexes.insert_many(indexed_tokens)
-        else:
-            print("No tokens generated — skipping insert.")
+    if count == 0:
+        print("Seeding documents...")
+        #read from csv file
+        try:
+            with open("app/assets/data.csv", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                data = list(reader)
+            if data:
+                await db.documents.insert_many(data)
+                
+                #calculate the index
+                docs = await db.documents.find({}).to_list(length=None)
+                doc_tokens = defaultdict(dict)
+                for doc in docs:
+                    tokens = tokenize(doc['content'])
+                    cleaned = clean_words(tokens)
+                    doc_tokens[doc['_id']]=cleaned
+                
+                indexed_tokens = inverted_index(doc_tokens)
+                if indexed_tokens:
+                    await db.invert_indexes.insert_many(indexed_tokens)
+                    
+        except FileNotFoundError:
+            print("data.csv not found, skipping seeding.")
     yield
 
 
