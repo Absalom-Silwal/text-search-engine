@@ -47,7 +47,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Feedback Search Engine", lifespan=lifespan)
 data = []
 
-
+#for solving cold start problem
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 app.add_middleware(
     CORSMiddleware,

@@ -4,7 +4,8 @@ from app.db.mongo import db
 
 class RankingService:
     async def ranking(query_tokens):
-        scores = defaultdict(float)
+        #scores = defaultdict(float)
+        scores = {}
         alpha = 0.3   # feedback weight
         beta = 0.5    # probability weight
         
@@ -29,7 +30,13 @@ class RankingService:
             
             idf = math.log(N / df)
             for doc_id, tf in docs_map.items():
-                scores[doc_id] += tf * idf
+                if doc_id not in scores:
+                    scores[doc_id]={
+                        'tfid':0,
+                        'feedback':0,
+                        'final':0
+                    }
+                scores[doc_id]['tfid'] += tf * idf
         
         if not scores:
             return []
@@ -52,8 +59,19 @@ class RankingService:
             click_score = int(click_scores_raw[i]) if click_scores_raw[i] else 0
             
             click_probability = click_score / total_query_clicks if total_query_clicks > 0 else 0
-            
-            scores[doc_id] += alpha * click_score + beta * click_probability
+            tfid = scores[doc_id]['tfid']
+            feedback = alpha * click_score + beta * click_probability
+            scores[doc_id]['final'] = tfid + feedback
+            scores[doc_id]['feedback'] = feedback
 
-        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        print(scores)
+        ranked = sorted(scores.items(), key=lambda x: x[1]['final'], reverse=True)
+        #print('ranked',ranked)
         return ranked
+# id: 1, 
+# title: "Introduction to Information Retrieval", 
+# snippet: "A comprehensive guide covering the fundamentals of search engines, indexing strategies, and document ranking algorithms used in modern systems.", 
+# tfidf: 0.87, 
+# feedback: 0.12, 
+# final: 0.92 }
+

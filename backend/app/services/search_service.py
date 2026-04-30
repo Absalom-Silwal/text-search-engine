@@ -12,6 +12,7 @@ class SearchService:
         
         # RankingService now returns all relevant doc_ids with scores
         scores = await RankingService.ranking(query_cleaned)
+        #print('scores',scores)
         
         total = len(scores)
         
@@ -42,8 +43,10 @@ class SearchService:
                 "id": str(doc["_id"]),
                 "title": doc["title"],
                 "snippet": doc["content"][:150] + ("..." if len(doc["content"]) > 150 else ""),
-                "score": score,
-                "explanation": f"Matched terms with calculated score {score:.4f}",
+                "score": score['final'],
+                "tfid":score['tfid'],
+                "feedback":score['feedback'],
+                "explanation": f"Matched terms with calculated score {score['final']:.4f}",
                 "link": doc.get("link", "")
             })
 

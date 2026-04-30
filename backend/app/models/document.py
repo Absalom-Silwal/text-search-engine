@@ -12,6 +12,8 @@ class SearchItem(BaseModel):
     title: str
     snippet: str
     score: float
+    tfid: float
+    feedback: float
     explanation: str
     link: str
 
